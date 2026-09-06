@@ -1,5 +1,5 @@
 
-'''import streamlit as st
+import streamlit as st
 import requests
 import pandas as pd
 
@@ -163,55 +163,7 @@ with st.expander("ℹ️ Public Guide: Understanding Ocean Temperature Threshold
         **🔴 Active El Niño (≥ 28.0°C)**
         * Ocean warming (>28°C threshold crossed).
         * Weakens monsoon winds and triggers global heatwaves.
-        """)'''
+        """)
 
 
 
-import streamlit as st
-import pandas as pd
-
-# Page Configuration
-st.set_page_config(page_title="El Niño Climate Tracker", page_icon="🌍", layout="centered")
-
-# Sidebar - About Section
-st.sidebar.title("About Project")
-st.sidebar.info(
-    "This app tracks real-time sea surface temperatures, local air temperature baselines, "
-    "and 7-day climate forecasts to analyze El Niño patterns."
-)
-st.sidebar.write("**Developer:** Daisy Priya")
-st.sidebar.markdown("[GitHub Repository](https://github.com/daisypriyav-spec/daisy)")
-
-# Main App Title
-st.title("🌍 El Niño Climate Tracker")
-
-# Local Air Temp Safe Baseline Section
-st.markdown("### 🟢 Local Air Temp: Safe Baseline")
-st.write("Current local ambient conditions are operating well within normal historical parameters.")
-
-# Pacific Ocean SST Index Section
-st.subheader("Pacific Ocean SST Index (El Niño 3.4)")
-sst_value = 29.5  
-st.metric(label="Sea Surface Temp", value=f"{sst_value} °C")
-
-# El Niño Status Alert Box
-if sst_value >= 28.5:
-    st.warning("⚠️ Active El Niño Conditions Detected! (Warmer ocean temperatures)")
-elif sst_value <= 23.5:
-    st.info("ℹ️ La Niña Conditions Detected! (Cooler ocean temperatures)")
-else:
-    st.success("✅ Neutral ENSO Conditions.")
-
-# Live 7-Day Temperature Forecast Chart
-st.subheader("Live 7-Day Temperature Forecast")
-
-dates = pd.date_range(start="2026-09-06", periods=7)
-temps = [29.2, 29.0, 29.2, 30.2, 29.8, 27.5, 25.0]
-
-chart_data = pd.DataFrame({
-    "Date": dates,
-    "Temperature (°C)": temps
-})
-chart_data.set_index("Date", inplace=True)
-
-st.line_chart(chart_data)
