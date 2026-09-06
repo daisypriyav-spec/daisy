@@ -167,7 +167,7 @@ with st.expander("ℹ️ Public Guide: Understanding Ocean Temperature Threshold
 
 
 
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 
 # Page Configuration
@@ -185,8 +185,9 @@ st.sidebar.markdown("[GitHub Repository](https://github.com/daisypriyav-spec/dai
 # Main App Title
 st.title("🌍 El Niño Climate Tracker")
 
-# Local Air Temp Section
-st.markdown("🟢 **LOCAL AIR TEMP: SAFE BASELINE**")
+# Local Air Temp Safe Baseline Section
+st.markdown("### 🟢 Local Air Temp: Safe Baseline")
+st.write("Current local ambient conditions are operating well within normal historical parameters.")
 
 # Pacific Ocean SST Index Section
 st.subheader("Pacific Ocean SST Index (El Niño 3.4)")
