@@ -1,7 +1,6 @@
 import datetime
 import pandas as pd
 import plotly.express as px
-import pydeck as pdk
 import requests
 import streamlit as st
 
@@ -19,7 +18,7 @@ st.markdown(
 )
 
 
-# Function to fetch live weather data and coordinates
+# Function to fetch live weather data and coordinates using Open-Meteo API
 def get_weather_data(city_name):
   try:
     geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&format=json"
@@ -102,28 +101,36 @@ elif current_temp > 38:
 else:
   st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
 
-# Fixed Pydeck Map (Properly visible with bright red point & terrain)
+# Clean Vector World Map with Red Pin (No token needed, works 100%)
 st.markdown("### 🗺️ Live Regional Satellite Tracking Map")
-map_data = pd.DataFrame({"lat": [lat], "lon": [lon]})
-
-layer = pdk.Layer(
-    "ScatterplotLayer",
-    data=map_data,
-    get_position="[lon, lat]",
-    get_color="[255, 0, 0, 200]",
-    get_radius=50000,
-    pickable=True,
+map_df = pd.DataFrame({"lat": [lat], "lon": [lon], "Location": [location_name]})
+fig_map = px.scatter_geo(
+    map_df,
+    lat="lat",
+    lon="lon",
+    text="Location",
+    projection="natural earth",
+    template="plotly_dark",
 )
-
-view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=4, pitch=0)
-
-r = pdk.Deck(
-    layers=[layer],
-    initial_view_state=view_state,
-    map_style="mapbox://styles/mapbox/dark-v10",
+fig_map.update_traces(
+    marker=dict(size=15, color="red", symbol="circle"),
+    textposition="top right",
 )
-
-st.pydeck_chart(r)
+fig_map.update_layout(
+    geo=dict(
+        bgcolor="#0e1117",
+        showland=True,
+        landcolor="#1f2937",
+        subunitcolor="#374151",
+        countrycolor="#4b5563",
+        showocean=True,
+        oceancolor="#0b0e14",
+    ),
+    margin=dict(t=10, b=10, l=10, r=10),
+    paper_bgcolor="#0e1117",
+    height=400,
+)
+st.plotly_chart(fig_map, use_container_width=True)
 
 # 7-Day Forecast
 st.markdown("### 📅 Live 7-Day Temperature Forecast")
