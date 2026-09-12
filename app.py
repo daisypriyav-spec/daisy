@@ -1,15 +1,16 @@
 import datetime
 import pandas as pd
 import plotly.express as px
+import pydeck as pdk
 import requests
 import streamlit as st
 
-# Page Configuration
+# Page configuration
 st.set_page_config(
     page_title="Live Global Climate & El Niño Threat Tracker", layout="wide"
 )
 
-# Custom Styling for Dark Theme Look
+# Custom Theme Styling
 st.markdown(
     """
     
@@ -18,14 +19,14 @@ st.markdown(
 )
 
 
-# Function to get real live weather and coordinates using Open-Meteo API
+# Function to fetch live weather data and coordinates
 def get_weather_data(city_name):
   try:
     geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&format=json"
     geo_res = requests.get(geo_url).json()
 
     if "results" not in geo_res or not geo_res["results"]:
-      return None, None, None, None, "City not found!"
+      return None, None, None, None, "Location not found!"
 
     lat = geo_res["results"][0]["latitude"]
     lon = geo_res["results"][0]["longitude"]
@@ -49,11 +50,11 @@ def get_weather_data(city_name):
     return None, None, None, None, str(e)
 
 
-# Sidebar - Regional Search Control
+# Sidebar controls
 st.sidebar.markdown("### 🕹️ Regional Search Control")
-city_input = st.sidebar.text_input("Enter City / Region:", "Chennai")
+city_input = st.sidebar.text_input("Enter Region/City:", "Chennai")
 
-# Session state to hold fetched data properly
+# Session states
 if "current_temp" not in st.session_state:
   st.session_state.current_temp = 29.1
   st.session_state.wind_speed = 13.8
@@ -62,7 +63,7 @@ if "current_temp" not in st.session_state:
   st.session_state.location_name = "Chennai, India"
 
 if st.sidebar.button("Sync Live Satellite Data"):
-  with st.spinner(f"Fetching live satellite data for {city_input}..."):
+  with st.spinner(f"Syncing live data for {city_input}..."):
     temp, wind, lat, lon, loc = get_weather_data(city_input)
     if temp is not None:
       st.session_state.current_temp = temp
@@ -70,9 +71,9 @@ if st.sidebar.button("Sync Live Satellite Data"):
       st.session_state.lat = lat
       st.session_state.lon = lon
       st.session_state.location_name = loc
-      st.sidebar.success("Data synced successfully!")
+      st.sidebar.success("Synced successfully!")
     else:
-      st.sidebar.error("Could not fetch data. Check city name.")
+      st.sidebar.error("Error fetching location.")
 
 current_temp = st.session_state.current_temp
 wind_speed = st.session_state.wind_speed
@@ -80,12 +81,12 @@ lat = st.session_state.lat
 lon = st.session_state.lon
 location_name = st.session_state.location_name
 
-# Main Dashboard Header
+# Main title
 st.title("🌍 Live Global Climate & El Niño Threat Tracker")
 st.markdown("Day-to-Day Live Satellite Sync & Public Impact Dashboard")
 st.markdown("---")
 
-# Region Live Weather Section
+# Live Weather Section
 st.markdown(f"### 📍 Region Live Weather: {location_name}")
 col1, col2 = st.columns(2)
 with col1:
@@ -93,7 +94,7 @@ with col1:
 with col2:
   st.metric(label="Wind Speed", value=f"{wind_speed} km/h")
 
-# Dynamic Baseline Indicator based on Temperature
+# Status Alert
 if current_temp < 0:
   st.info("❄️ LOCAL AIR TEMP: SUB-ZERO FREEZING CONDITION")
 elif current_temp > 38:
@@ -101,38 +102,30 @@ elif current_temp > 38:
 else:
   st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
 
-# Crisp Vector World Map with Red Location Pin
+# Fixed Pydeck Map (Properly visible with bright red point & terrain)
 st.markdown("### 🗺️ Live Regional Satellite Tracking Map")
-map_df = pd.DataFrame({"lat": [lat], "lon": [lon], "Location": [location_name]})
-fig_map = px.scatter_geo(
-    map_df,
-    lat="lat",
-    lon="lon",
-    text="Location",
-    projection="natural earth",
-    template="plotly_dark",
-)
-fig_map.update_traces(
-    marker=dict(size=14, color="red", symbol="circle"),
-    textposition="top right",
-)
-fig_map.update_layout(
-    geo=dict(
-        bgcolor="#0e1117",
-        showland=True,
-        landcolor="#1f2937",
-        subunitcolor="#374151",
-        countrycolor="#4b5563",
-        showocean=True,
-        oceancolor="#0b0e14",
-    ),
-    margin=dict(t=10, b=10, l=10, r=10),
-    paper_bgcolor="#0e1117",
-    height=400,
-)
-st.plotly_chart(fig_map, use_container_width=True)
+map_data = pd.DataFrame({"lat": [lat], "lon": [lon]})
 
-# Live 7-Day Temperature Forecast Chart
+layer = pdk.Layer(
+    "ScatterplotLayer",
+    data=map_data,
+    get_position="[lon, lat]",
+    get_color="[255, 0, 0, 200]",
+    get_radius=50000,
+    pickable=True,
+)
+
+view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=4, pitch=0)
+
+r = pdk.Deck(
+    layers=[layer],
+    initial_view_state=view_state,
+    map_style="mapbox://styles/mapbox/dark-v10",
+)
+
+st.pydeck_chart(r)
+
+# 7-Day Forecast
 st.markdown("### 📅 Live 7-Day Temperature Forecast")
 forecast_data = pd.DataFrame({
     "Date": pd.date_range(start="2026-09-12", periods=7),
@@ -158,7 +151,7 @@ fig_forecast.update_layout(
 )
 st.plotly_chart(fig_forecast, use_container_width=True)
 
-# Pacific Ocean SST Index (El Niño 3.4)
+# Pacific Ocean SST
 st.markdown("### 🌊 Pacific Ocean SST Index (El Niño 3.4)")
 st.metric(label="Pacific Sea Surface Temp (SST)", value="29.2 °C")
 
@@ -169,7 +162,7 @@ st.markdown(
     " monsoons & intense heatwaves."
 )
 
-# Hourly Pacific Ocean Temperature Log
+# Hourly Ocean Log
 st.markdown("### 📈 Hourly Pacific Ocean Temperature Log")
 hourly_data = pd.DataFrame({
     "Time Log": pd.date_range(start="2026-09-12 00:00", periods=12, freq="2h"),
@@ -196,7 +189,7 @@ fig_hourly.update_layout(
 )
 st.plotly_chart(fig_hourly, use_container_width=True)
 
-# Actionable Public Health Advisories
+# Advisories & Helplines
 st.markdown("### 💡 Actionable Public Health Advisories")
 if current_temp < 0:
   st.warning(
@@ -206,7 +199,6 @@ if current_temp < 0:
 else:
   st.info("💧 Maintain regular hydration levels throughout the day.")
 
-# Emergency Helpline Support
 st.markdown("### 🚨 Emergency Helpline Support")
 st.markdown("""
 * **National Disaster Management (NDMA):** 1078
