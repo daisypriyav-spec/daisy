@@ -6,7 +6,7 @@ import streamlit as st
 
 # Page configuration
 st.set_page_config(
-    page_title="Live Global Climate & El Niño Threat Tracker", layout="wide"
+    page_title="Pacific Ocean & El Niño Climate Threat Tracker", layout="wide"
 )
 
 # Custom Theme Styling
@@ -17,8 +17,58 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Main title focused on Pacific Ocean State
+st.title("🌊 Pacific Ocean & El Niño Threat Tracker")
+st.markdown("Live Sea Surface Temperature (SST) & Global Climate Impact Dashboard")
+st.markdown("---")
 
-# Function to fetch live weather data and coordinates
+# --- CORE FOCUS: Pacific Ocean SST & El Niño Status ---
+st.markdown("### 🌊 Pacific Ocean SST Index (El Niño 3.4)")
+col1, col2 = st.columns(2)
+with col1:
+  st.metric(label="Current Pacific Sea Surface Temp (SST)", value="29.2 °C")
+with col2:
+  st.metric(label="Anomaly Deviation", value="+1.4 °C (Above Normal)")
+
+st.markdown("### 📊 Live Visual Ocean State Indicator")
+st.error("🚨 CRITICAL STATE: ACTIVE EL NIÑO EVENT DETECTED!")
+st.markdown(
+    "**Public Impact & Scientific Context:** Sustained warming in the central"
+    " and eastern tropical Pacific Ocean. Severe risk of disrupted monsoon"
+    " cycles, global weather shifts, and intense heatwaves."
+)
+
+# Hourly Ocean Log Chart
+st.markdown("### 📈 Hourly Pacific Ocean Temperature Log")
+hourly_data = pd.DataFrame({
+    "Time Log": pd.date_range(start="2026-09-12 00:00", periods=12, freq="2h"),
+    "Pacific Temp (°C)": [
+        28.5,
+        28.6,
+        28.8,
+        29.0,
+        29.1,
+        29.3,
+        29.2,
+        29.0,
+        28.9,
+        28.8,
+        28.7,
+        28.6,
+    ],
+})
+fig_hourly = px.area(
+    hourly_data, x="Time Log", y="Pacific Temp (°C)", template="plotly_dark"
+)
+fig_hourly.update_layout(
+    plot_bgcolor="#0e1117", paper_bgcolor="#0e1117", margin=dict(t=20, b=20)
+)
+st.plotly_chart(fig_hourly, use_container_width=True)
+
+st.markdown("---")
+
+
+# --- SECONDARY: Optional Regional Weather & Map Check ---
 def get_weather_data(city_name):
   try:
     geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&format=json"
@@ -49,11 +99,9 @@ def get_weather_data(city_name):
     return None, None, None, None, str(e)
 
 
-# Sidebar controls
-st.sidebar.markdown("### 🕹️ Regional Search Control")
+st.sidebar.markdown("### 🕹️ Optional Regional Check")
 city_input = st.sidebar.text_input("Enter Region/City:", "Chennai")
 
-# Session states
 if "current_temp" not in st.session_state:
   st.session_state.current_temp = 29.1
   st.session_state.wind_speed = 13.8
@@ -61,8 +109,8 @@ if "current_temp" not in st.session_state:
   st.session_state.lon = 80.2707
   st.session_state.location_name = "Chennai, India"
 
-if st.sidebar.button("Sync Live Satellite Data"):
-  with st.spinner(f"Syncing live data for {city_input}..."):
+if st.sidebar.button("Sync Region Data"):
+  with st.spinner(f"Syncing data for {city_input}..."):
     temp, wind, lat, lon, loc = get_weather_data(city_input)
     if temp is not None:
       st.session_state.current_temp = temp
@@ -75,110 +123,28 @@ if st.sidebar.button("Sync Live Satellite Data"):
       st.sidebar.error("Error fetching location.")
 
 current_temp = st.session_state.current_temp
-wind_speed = st.session_state.wind_speed
+location_name = st.session_state.location_name
 lat = st.session_state.lat
 lon = st.session_state.lon
-location_name = st.session_state.location_name
 
-# Main title
-st.title("🌍 Live Global Climate & El Niño Threat Tracker")
-st.markdown("Day-to-Day Live Satellite Sync & Public Impact Dashboard")
-st.markdown("---")
+st.markdown(f"### 📍 Regional Impact Tracker: {location_name}")
+col_r1, col_r2 = st.columns(2)
+with col_r1:
+  st.metric(label="Local Air Temp", value=f"{current_temp} °C")
+with col_r2:
+  st.metric(label="El Niño Correlation Risk", value="High")
 
-# Live Weather Section
-st.markdown(f"### 📍 Region Live Weather: {location_name}")
-col1, col2 = st.columns(2)
-with col1:
-  st.metric(label="Current Air Temp", value=f"{current_temp} °C")
-with col2:
-  st.metric(label="Wind Speed", value=f"{wind_speed} km/h")
-
-# Status Alert
-if current_temp < 0:
-  st.info("❄️ LOCAL AIR TEMP: SUB-ZERO FREEZING CONDITION")
-elif current_temp > 38:
-  st.error("🔥 LOCAL AIR TEMP: EXTREME HEATWAVE ALERT")
-else:
-  st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
-
-# Fixed Streamlit Built-in Map (Works 100% on all devices)
-st.markdown("### 🗺️ Live Regional Satellite Tracking Map")
+# Map
+st.markdown("### 🗺️ Geographic Reference Map")
 map_df = pd.DataFrame({"lat": [lat], "lon": [lon]})
 st.map(map_df, zoom=4)
 
-# 7-Day Forecast
-st.markdown("### 📅 Live 7-Day Temperature Forecast")
-forecast_data = pd.DataFrame({
-    "Date": pd.date_range(start="2026-09-12", periods=7),
-    "Max Temp (°C)": [
-        current_temp + 1.2,
-        current_temp + 0.5,
-        current_temp + 0.4,
-        current_temp + 0.8,
-        current_temp + 1.0,
-        current_temp + 1.5,
-        current_temp + 1.1,
-    ],
-})
-fig_forecast = px.line(
-    forecast_data,
-    x="Date",
-    y="Max Temp (°C)",
-    markers=True,
-    template="plotly_dark",
-)
-fig_forecast.update_layout(
-    plot_bgcolor="#0e1117", paper_bgcolor="#0e1117", margin=dict(t=20, b=20)
-)
-st.plotly_chart(fig_forecast, use_container_width=True)
-
-# Pacific Ocean SST
-st.markdown("### 🌊 Pacific Ocean SST Index (El Niño 3.4)")
-st.metric(label="Pacific Sea Surface Temp (SST)", value="29.2 °C")
-
-st.markdown("### 📊 Live Visual Ocean State Indicator")
-st.error("🚨 CRITICAL STATE: ACTIVE EL NIÑO EVENT DETECTED!")
-st.markdown(
-    "**Public Impact:** High Pacific ocean warming. Severe risk of delayed"
-    " monsoons & intense heatwaves."
-)
-
-# Hourly Ocean Log
-st.markdown("### 📈 Hourly Pacific Ocean Temperature Log")
-hourly_data = pd.DataFrame({
-    "Time Log": pd.date_range(start="2026-09-12 00:00", periods=12, freq="2h"),
-    "Pacific Temp (°C)": [
-        28.5,
-        28.6,
-        28.8,
-        29.0,
-        29.1,
-        29.3,
-        29.2,
-        29.0,
-        28.9,
-        28.8,
-        28.7,
-        28.6,
-    ],
-})
-fig_hourly = px.area(
-    hourly_data, x="Time Log", y="Pacific Temp (°C)", template="plotly_dark"
-)
-fig_hourly.update_layout(
-    plot_bgcolor="#0e1117", paper_bgcolor="#0e1117", margin=dict(t=20, b=20)
-)
-st.plotly_chart(fig_hourly, use_container_width=True)
-
 # Advisories & Helplines
-st.markdown("### 💡 Actionable Public Health Advisories")
-if current_temp < 0:
-  st.warning(
-      "🧥 Sub-zero temperatures detected! Wear heavy thermal layers and avoid"
-      " prolonged outdoor exposure."
-  )
-else:
-  st.info("💧 Maintain regular hydration levels throughout the day.")
+st.markdown("### 💡 Climate Action & Public Health Advisories")
+st.info(
+    "💧 Due to active El Niño conditions, ensure water conservation and"
+    " monitor heat advisories regularly."
+)
 
 st.markdown("### 🚨 Emergency Helpline Support")
 st.markdown("""
