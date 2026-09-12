@@ -101,10 +101,36 @@ elif current_temp > 38:
 else:
   st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
 
-# Simple, Clear Interactive Map with Location Marker
+# Crisp Vector World Map with Red Location Pin
 st.markdown("### 🗺️ Live Regional Satellite Tracking Map")
-map_df = pd.DataFrame({"lat": [lat], "lon": [lon]})
-st.map(map_df, zoom=5, use_container_width=True)
+map_df = pd.DataFrame({"lat": [lat], "lon": [lon], "Location": [location_name]})
+fig_map = px.scatter_geo(
+    map_df,
+    lat="lat",
+    lon="lon",
+    text="Location",
+    projection="natural earth",
+    template="plotly_dark",
+)
+fig_map.update_traces(
+    marker=dict(size=14, color="red", symbol="circle"),
+    textposition="top right",
+)
+fig_map.update_layout(
+    geo=dict(
+        bgcolor="#0e1117",
+        showland=True,
+        landcolor="#1f2937",
+        subunitcolor="#374151",
+        countrycolor="#4b5563",
+        showocean=True,
+        oceancolor="#0b0e14",
+    ),
+    margin=dict(t=10, b=10, l=10, r=10),
+    paper_bgcolor="#0e1117",
+    height=400,
+)
+st.plotly_chart(fig_map, use_container_width=True)
 
 # Live 7-Day Temperature Forecast Chart
 st.markdown("### 📅 Live 7-Day Temperature Forecast")
