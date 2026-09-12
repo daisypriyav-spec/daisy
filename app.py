@@ -38,6 +38,14 @@ st.markdown(
     " cycles, global weather shifts, and intense heatwaves."
 )
 
+# Pacific Ocean Focused Map (Centered on El Niño 3.4 Region: Equator / Pacific)
+st.markdown("### 🗺️ Pacific Ocean & El Niño Tracking Map")
+pacific_map_df = pd.DataFrame({
+    "lat": [0.0],
+    "lon": [-140.0],
+})  # Center of tropical Pacific Ocean
+st.map(pacific_map_df, zoom=2, size=2000)
+
 # Hourly Ocean Log Chart
 st.markdown("### 📈 Hourly Pacific Ocean Temperature Log")
 hourly_data = pd.DataFrame({
@@ -64,80 +72,6 @@ fig_hourly.update_layout(
     plot_bgcolor="#0e1117", paper_bgcolor="#0e1117", margin=dict(t=20, b=20)
 )
 st.plotly_chart(fig_hourly, use_container_width=True)
-
-st.markdown("---")
-
-
-# --- SECONDARY: Optional Regional Weather & Map Check ---
-def get_weather_data(city_name):
-  try:
-    geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&format=json"
-    geo_res = requests.get(geo_url).json()
-
-    if "results" not in geo_res or not geo_res["results"]:
-      return None, None, None, None, "Location not found!"
-
-    lat = geo_res["results"][0]["latitude"]
-    lon = geo_res["results"][0]["longitude"]
-    resolved_name = geo_res["results"][0].get("name", city_name)
-    country = geo_res["results"][0].get("country", "")
-
-    weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m"
-    weather_res = requests.get(weather_url).json()
-
-    current_temp = weather_res["current"]["temperature_2m"]
-    wind_speed = weather_res["current"]["wind_speed_10m"]
-
-    return (
-        current_temp,
-        wind_speed,
-        lat,
-        lon,
-        f"{resolved_name}, {country}" if country else resolved_name,
-    )
-  except Exception as e:
-    return None, None, None, None, str(e)
-
-
-st.sidebar.markdown("### 🕹️ Optional Regional Check")
-city_input = st.sidebar.text_input("Enter Region/City:", "Chennai")
-
-if "current_temp" not in st.session_state:
-  st.session_state.current_temp = 29.1
-  st.session_state.wind_speed = 13.8
-  st.session_state.lat = 13.0827
-  st.session_state.lon = 80.2707
-  st.session_state.location_name = "Chennai, India"
-
-if st.sidebar.button("Sync Region Data"):
-  with st.spinner(f"Syncing data for {city_input}..."):
-    temp, wind, lat, lon, loc = get_weather_data(city_input)
-    if temp is not None:
-      st.session_state.current_temp = temp
-      st.session_state.wind_speed = wind
-      st.session_state.lat = lat
-      st.session_state.lon = lon
-      st.session_state.location_name = loc
-      st.sidebar.success("Synced successfully!")
-    else:
-      st.sidebar.error("Error fetching location.")
-
-current_temp = st.session_state.current_temp
-location_name = st.session_state.location_name
-lat = st.session_state.lat
-lon = st.session_state.lon
-
-st.markdown(f"### 📍 Regional Impact Tracker: {location_name}")
-col_r1, col_r2 = st.columns(2)
-with col_r1:
-  st.metric(label="Local Air Temp", value=f"{current_temp} °C")
-with col_r2:
-  st.metric(label="El Niño Correlation Risk", value="High")
-
-# Map
-st.markdown("### 🗺️ Geographic Reference Map")
-map_df = pd.DataFrame({"lat": [lat], "lon": [lon]})
-st.map(map_df, zoom=4)
 
 # Advisories & Helplines
 st.markdown("### 💡 Climate Action & Public Health Advisories")
