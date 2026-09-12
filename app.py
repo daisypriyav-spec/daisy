@@ -1,7 +1,6 @@
 import datetime
 import pandas as pd
 import plotly.express as px
-import pydeck as pdk
 import requests
 import streamlit as st
 
@@ -102,26 +101,10 @@ elif current_temp > 38:
 else:
   st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
 
-# Interactive Regional Map with Red Point (Live Coordinates)
+# Simple, Clear Interactive Map with Location Marker
 st.markdown("### 🗺️ Live Regional Satellite Tracking Map")
-map_data = pd.DataFrame({"lat": [lat], "lon": [lon]})
-st.pydeck_chart(
-    pdk.Deck(
-        map_style="mapbox://styles/mapbox/dark-v10",
-        initial_view_state=pdk.ViewState(
-            latitude=lat, longitude=lon, zoom=4, pitch=50
-        ),
-        layers=[
-            pdk.Layer(
-                "ScatterplotLayer",
-                data=map_data,
-                get_position="[lon, lat]",
-                get_color="[255, 0, 0, 200]",  # Bright Red Marker
-                get_radius=150000,
-            )
-        ],
-    )
-)
+map_df = pd.DataFrame({"lat": [lat], "lon": [lon]})
+st.map(map_df, zoom=5, use_container_width=True)
 
 # Live 7-Day Temperature Forecast Chart
 st.markdown("### 📅 Live 7-Day Temperature Forecast")
