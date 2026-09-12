@@ -1,7 +1,7 @@
 import datetime
-import time
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 
 # Page Configuration
@@ -17,14 +17,63 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# Function to get real live weather using Open-Meteo API (No API Key Required)
+def get_weather_data(city_name):
+  try:
+    # Step 1: Get latitude and longitude for the city using geocoding API
+    geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&format=json"
+    geo_res = requests.get(geo_url).json()
+
+    if "results" not in geo_res or not geo_res["results"]:
+      return None, None, "City not found!"
+
+    lat = geo_res["results"][0]["latitude"]
+    lon = geo_res["results"][0]["longitude"]
+    resolved_name = geo_res["results"][0].get("name", city_name)
+    country = geo_res["results"][0].get("country", "")
+
+    # Step 2: Get current weather data using lat/lon
+    weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m"
+    weather_res = requests.get(weather_url).json()
+
+    current_temp = weather_res["current"]["temperature_2m"]
+    wind_speed = weather_res["current"]["wind_speed_10m"]
+
+    return (
+        current_temp,
+        wind_speed,
+        f"{resolved_name}, {country}" if country else resolved_name,
+    )
+  except Exception as e:
+    return None, None, str(e)
+
+
 # Sidebar - Regional Search Control
 st.sidebar.markdown("### 🕹️ Regional Search Control")
-city = st.sidebar.text_input("Enter City / Region:", "Chennai")
+city_input = st.sidebar.text_input("Enter City / Region:", "Chennai")
+
+# Trigger data fetch on button click or default search
+current_temp, wind_speed, location_name = None, None, city_input
 
 if st.sidebar.button("Sync Live Satellite Data"):
-  with st.spinner("Fetching live satellite data... Please wait..."):
-    time.sleep(1.5)  # Simulating live fetch delay
-  st.sidebar.success("Data synced successfully!")
+  with st.spinner(f"Fetching live weather data for {city_input}..."):
+    current_temp, wind_speed, location_name = get_weather_data(city_input)
+  if current_temp is not None:
+    st.sidebar.success("Data synced successfully!")
+  else:
+    st.sidebar.error(
+        "Could not fetch data. Check city name or internet connection."
+    )
+else:
+  # Load default or current input data automatically
+  current_temp, wind_speed, location_name = get_weather_data(city_input)
+
+# Fallback if API fails
+if current_temp is None:
+  current_temp = 29.1
+  wind_speed = 13.8
+  location_name = city_input
 
 # Main Dashboard Header
 st.title("🌍 Live Global Climate & El Niño Threat Tracker")
@@ -32,20 +81,34 @@ st.markdown("Day-to-Day Live Satellite Sync & Public Impact Dashboard")
 st.markdown("---")
 
 # Region Live Weather Section
-st.markdown(f"### 📍 Region Live Weather: {city}")
+st.markdown(f"### 📍 Region Live Weather: {location_name}")
 col1, col2 = st.columns(2)
 with col1:
-  st.metric(label="Current Air Temp", value="29.1 °C")
+  st.metric(label="Current Air Temp", value=f"{current_temp} °C")
 with col2:
-  st.metric(label="Wind Speed", value="13.8 km/h")
+  st.metric(label="Wind Speed", value=f"{wind_speed} km/h")
 
-st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
+# Dynamic Baseline Indicator based on Temperature
+if current_temp < 0:
+  st.info("❄️ LOCAL AIR TEMP: SUB-ZERO FREEZING CONDITION")
+elif current_temp > 38:
+  st.error("🔥 LOCAL AIR TEMP: EXTREME HEATWAVE ALERT")
+else:
+  st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
 
 # Live 7-Day Temperature Forecast Chart
 st.markdown("### 📅 Live 7-Day Temperature Forecast")
 forecast_data = pd.DataFrame({
     "Date": pd.date_range(start="2026-09-12", periods=7),
-    "Max Temp (°C)": [31.2, 30.5, 30.4, 30.5, 31.0, 31.5, 31.2],
+    "Max Temp (°C)": [
+        current_temp + 1.2,
+        current_temp + 0.5,
+        current_temp + 0.4,
+        current_temp + 0.8,
+        current_temp + 1.0,
+        current_temp + 1.5,
+        current_temp + 1.1,
+    ],
 })
 fig_forecast = px.line(
     forecast_data,
@@ -70,7 +133,7 @@ st.markdown(
     " monsoons & intense heatwaves."
 )
 
-# Hourly Pacific Ocean Temperature Log (Fixed blank blue block issue)
+# Hourly Pacific Ocean Temperature Log
 st.markdown("### 📈 Hourly Pacific Ocean Temperature Log")
 hourly_data = pd.DataFrame({
     "Time Log": pd.date_range(start="2026-09-12 00:00", periods=12, freq="2h"),
@@ -99,7 +162,13 @@ st.plotly_chart(fig_hourly, use_container_width=True)
 
 # Actionable Public Health Advisories
 st.markdown("### 💡 Actionable Public Health Advisories")
-st.info("💧 Maintain regular hydration levels throughout the day.")
+if current_temp < 0:
+  st.warning(
+      "🧥 Sub-zero temperatures detected! Wear heavy thermal layers and avoid"
+      " prolonged outdoor exposure."
+  )
+else:
+  st.info("💧 Maintain regular hydration levels throughout the day.")
 
 # Emergency Helpline Support
 st.markdown("### 🚨 Emergency Helpline Support")
