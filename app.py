@@ -1,6 +1,7 @@
 import datetime
 import pandas as pd
 import plotly.express as px
+import pydeck as pdk
 import requests
 import streamlit as st
 
@@ -18,22 +19,20 @@ st.markdown(
 )
 
 
-# Function to get real live weather using Open-Meteo API (No API Key Required)
+# Function to get real live weather and coordinates using Open-Meteo API
 def get_weather_data(city_name):
   try:
-    # Step 1: Get latitude and longitude for the city using geocoding API
     geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&format=json"
     geo_res = requests.get(geo_url).json()
 
     if "results" not in geo_res or not geo_res["results"]:
-      return None, None, "City not found!"
+      return None, None, None, None, "City not found!"
 
     lat = geo_res["results"][0]["latitude"]
     lon = geo_res["results"][0]["longitude"]
     resolved_name = geo_res["results"][0].get("name", city_name)
     country = geo_res["results"][0].get("country", "")
 
-    # Step 2: Get current weather data using lat/lon
     weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m"
     weather_res = requests.get(weather_url).json()
 
@@ -43,37 +42,44 @@ def get_weather_data(city_name):
     return (
         current_temp,
         wind_speed,
+        lat,
+        lon,
         f"{resolved_name}, {country}" if country else resolved_name,
     )
   except Exception as e:
-    return None, None, str(e)
+    return None, None, None, None, str(e)
 
 
 # Sidebar - Regional Search Control
 st.sidebar.markdown("### 🕹️ Regional Search Control")
 city_input = st.sidebar.text_input("Enter City / Region:", "Chennai")
 
-# Trigger data fetch on button click or default search
-current_temp, wind_speed, location_name = None, None, city_input
+# Session state to hold fetched data properly
+if "current_temp" not in st.session_state:
+  st.session_state.current_temp = 29.1
+  st.session_state.wind_speed = 13.8
+  st.session_state.lat = 13.0827
+  st.session_state.lon = 80.2707
+  st.session_state.location_name = "Chennai, India"
 
 if st.sidebar.button("Sync Live Satellite Data"):
-  with st.spinner(f"Fetching live weather data for {city_input}..."):
-    current_temp, wind_speed, location_name = get_weather_data(city_input)
-  if current_temp is not None:
-    st.sidebar.success("Data synced successfully!")
-  else:
-    st.sidebar.error(
-        "Could not fetch data. Check city name or internet connection."
-    )
-else:
-  # Load default or current input data automatically
-  current_temp, wind_speed, location_name = get_weather_data(city_input)
+  with st.spinner(f"Fetching live satellite data for {city_input}..."):
+    temp, wind, lat, lon, loc = get_weather_data(city_input)
+    if temp is not None:
+      st.session_state.current_temp = temp
+      st.session_state.wind_speed = wind
+      st.session_state.lat = lat
+      st.session_state.lon = lon
+      st.session_state.location_name = loc
+      st.sidebar.success("Data synced successfully!")
+    else:
+      st.sidebar.error("Could not fetch data. Check city name.")
 
-# Fallback if API fails
-if current_temp is None:
-  current_temp = 29.1
-  wind_speed = 13.8
-  location_name = city_input
+current_temp = st.session_state.current_temp
+wind_speed = st.session_state.wind_speed
+lat = st.session_state.lat
+lon = st.session_state.lon
+location_name = st.session_state.location_name
 
 # Main Dashboard Header
 st.title("🌍 Live Global Climate & El Niño Threat Tracker")
@@ -95,6 +101,27 @@ elif current_temp > 38:
   st.error("🔥 LOCAL AIR TEMP: EXTREME HEATWAVE ALERT")
 else:
   st.success("🟢 LOCAL AIR TEMP: SAFE BASELINE")
+
+# Interactive Regional Map with Red Point (Live Coordinates)
+st.markdown("### 🗺️ Live Regional Satellite Tracking Map")
+map_data = pd.DataFrame({"lat": [lat], "lon": [lon]})
+st.pydeck_chart(
+    pdk.Deck(
+        map_style="mapbox://styles/mapbox/dark-v10",
+        initial_view_state=pdk.ViewState(
+            latitude=lat, longitude=lon, zoom=4, pitch=50
+        ),
+        layers=[
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=map_data,
+                get_position="[lon, lat]",
+                get_color="[255, 0, 0, 200]",  # Bright Red Marker
+                get_radius=150000,
+            )
+        ],
+    )
+)
 
 # Live 7-Day Temperature Forecast Chart
 st.markdown("### 📅 Live 7-Day Temperature Forecast")
